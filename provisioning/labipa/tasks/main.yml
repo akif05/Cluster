@@ -1,0 +1,66 @@
+---
+- name: "Set SELinux to permissive"
+  selinux:
+    policy="targeted"
+    state="permissive"
+
+- name: "Install FreeIPA packages"
+  yum:
+    name="{{ item }}"
+    state="present"
+  with_items:
+    - haveged # speedup ipa-server-install, see http://blog-ftweedal.rhcloud.com/2014/05/more-entropy-with-haveged/, requires epel-release
+    - ipa-server
+    - ipa-server-dns
+    - bind-dyndb-ldap
+
+- name: "Start haveged"
+  service:
+    name: haveged
+    state: started
+    enabled: yes
+
+- name: "Check if FreeIPA is already installed"
+  stat:
+    path="/root/cacert.p12"
+  register: labipa_status
+
+- name: "Configure FreeIPA server"
+  shell:
+    "
+    ipa-server-install \
+    	--setup-dns \
+    	--domain={{ domain_name }} \
+    	--realm={{ ipa_realm }} \
+    	--ds-password={{ ldap_directory_manager_password }} \
+    	--admin-password={{ ipa_admin_password }} \
+    	--forwarder={{ ansible_dns.nameservers[0] }} \
+    	--reverse-zone={{ reverse_dns }} \
+    	--unattended
+    "
+  when: labipa_status.stat.exists == false
+
+- name: "Start & Enable krb5kdc/firewalld services"
+  service:
+    name="{{ item }}"
+    state="started"
+    enabled="yes"
+  with_items:
+    - krb5kdc
+    - firewalld
+
+- name: "Open needed ports in firewalld"
+  firewalld:
+    service="{{ item }}"
+    permanent="yes"
+    state="enabled"
+    immediate="yes"
+  with_items:
+    - http
+    - https
+    - ldap
+    - ldaps
+    - kerberos
+    - kpasswd
+    - dns
+    - ntp

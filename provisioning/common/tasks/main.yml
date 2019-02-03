@@ -1,0 +1,8 @@
+---
+- name: "Include Debian OS family tasks"
+  include: debian_common.yml
+  when: ansible_os_family == "Debian"
+
+- name: "Include Red Hat OS family tasks"
+  include: redhat_common.yml
+  when: ansible_os_family == 'RedHat'
