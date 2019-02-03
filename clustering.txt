@@ -39,14 +39,6 @@ systemctl status corosync -l
 
 
 ####### ssh tunnel
-for i in `seq 1 3`; do echo $i; done
-
-for i in `seq 1 3`; do printf "192.168.4.2%d0\n" $i; done
-
-for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; done
-
-for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh root@$ipaddr 'ls /root'; done
-
 ### Working all the 3 for loops !!!!!
 for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh root@$ipaddr 'yum -y install epel-release; \
 					yum -y install pcs fence-agents-all; \
@@ -63,8 +55,17 @@ for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); ssh root@$ipaddr 
 
 for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); ssh root@$ipaddr 'cat /etc/hosts'
 			done
+
+## Do not use this scripts in production!!!
 ## Delete the lines starting with 192.168... from the hosts file
 for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh root@$ipaddr 'awk "!/192.168*/" /etc/hosts > temp && mv temp /etc/hosts <<< yes'
 			done
 #########################################################################
 
+############ Thise are test for loops!!! ################################
+for i in `seq 1 3`; do echo $i; done
+for i in `seq 1 3`; do printf "192.168.4.2%d0\n" $i; done
+for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; done
+for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh root@$ipaddr 'ls /root'; done
+
+Fikar26102
