@@ -1,0 +1,38 @@
+
+
+win131.  C18 u19.  C18-R610-19
+
+win132.  C16-R610-36
+
+win133.  C12-R610-29
+
+win133.  C18-R610-18
+
+failback@uk.slo.prgn.c10.stk2# set interfaces ge-8/0/25 disable
+failback@uk.slo.prgn.c10.stk2# set interfaces ge-5/0/9 disable
+failback@uk.slo.prgn.c10.stk2# set interfaces ge-0/0/15 disable
+failback@uk.slo.prgn.c10.stk2# set interfaces ge-8/0/24 disable
+failback@uk.slo.prgn.c10.stk2# commit check
+failback@uk.slo.prgn.c10.stk2# commit
+
+Racktables is updated:
+
+win131:  C18-R610-19
+
+win132:  C16-R610-36
+
+win133:  C12-R610-29
+
+win133:  C18-R610-18
+
+https://racktables-001.prgn.misp.co.uk/racktables/index.php?page=object&tab=edit&object_id=203
+https://racktables-001.prgn.misp.co.uk/racktables/index.php?page=object&tab=edit&object_id=6938&hl_ip=10.12.56.36
+https://racktables-001.prgn.misp.co.uk/racktables/index.php?page=object&tab=edit&object_id=133
+https://racktables-001.prgn.misp.co.uk/racktables/index.php?page=object&tab=edit&object_id=28
+
+
+
+lin-10-170-0-198
+puppet cert sign lin-10-170-0-198.gridhost.co.uk
+puppet run
+
