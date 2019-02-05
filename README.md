@@ -1,5 +1,5 @@
 #RH clustering
-## Clustering, Clastering, read from stdin
+# Clustering, Clastering, read from stdin
 corosync on suse
 First node: "node1"
 	zypper in ha-cluster-bootstrap
@@ -13,7 +13,7 @@ All other nodes
 	crm_mon
 	systemctl status corosync
 	
-### Ha on redhad (centos)
+# Ha on redhad (centos)
 yum -y install epel-release
 yum -y install pcs fence-agents-all
 firewall-cmd --permanent --add-serice=high-availablility 
@@ -39,8 +39,8 @@ systemctl status corosync -l
 
 
 
-####### ssh tunnel
-### Working all the 3 for loops !!!!!
+# ssh tunnel
+# Working all the 3 for loops !!!!!
 for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh root@$ipaddr 'yum -y install epel-release; \
 					yum -y install pcs fence-agents-all; \
 					firewall-cmd --permanent --add-serice=high-availablility; \ 
@@ -49,7 +49,7 @@ for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh
 					echo password | passwd --stdin hacluster'
 					done
 
-#########################################################################
+####
 for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); ssh root@$ipaddr 'awk "!/192.168.4/" /etc/hosts > temp && mv temp /etc/hosts <<< yes; \
 			printf "192.168.4.210\tserver1.example.com\tserver1\n192.168.4.220\tserver2.example.com\tserver2\n192.168.4.230\tserver3.example.com\tserver3\n" >> /etc/hosts'
 			done
@@ -57,17 +57,17 @@ for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); ssh root@$ipaddr 
 for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); ssh root@$ipaddr 'cat /etc/hosts'
 			done
 
-## Do not use this scripts in production!!!
-## Delete the lines starting with 192.168... from the hosts file
+# Do not use this scripts in production!!!
+# Delete the lines starting with 192.168... from the hosts file
 for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh root@$ipaddr 'awk "!/192.168/" /etc/hosts > temp && mv temp /etc/hosts <<< yes'
 			done
-###
+#
 
-############ CIB = Cluster Information Base
+# CIB = Cluster Information Base
 Cluster information base is inmemory state of the Cluster
 
 Crmd is 
-############ CIB = Cluster Information Base
+# CIB = Cluster Information Base
 Cluster information base is inmemory state of the Cluster
 It is running  in all nodes
 
@@ -91,21 +91,21 @@ crmsh  = crmshell
 crm tab tab
 cibadmin ==== is used to modify cluster config xml code
 
-## Qurey 
+# Qurey 
 cibadmin -Q | less
 
 crm configure tab tab
-## Show the cluster information
+# Show the cluster information
 crm configure show
 crm configure edit
 
 crm configure     == opens live shel
 crm configure
-## Create ip address resource and monitor it every 20 seconds
+# Create ip address resource and monitor it every 20 seconds
 primive newip ocf:heartbeat:IPaddr2 params ip=192.168.122.55 op monit interval=20s
 exit
 
-## write configuration into file
+# write configuration into file
 crm configure save cluster-$(date +%m-%d)-01.txt
 
 # Destroy everyting
@@ -118,13 +118,13 @@ crm configure load push cluster-06-19-11.txt
 vi /usr/share/pacemaker/crm.dtd
 
 
-### PCS
+# PCS
 # check if pcsd running on all nodes
 systemctl status pcsd
 pcs tab tab
 pcs cluster edit
 export EDITOR=/usr/bin/vi
-## looks licke crm
+# looks licke crm
 # check if bash complition is installed
 # Create modify resources
 pcs resource 
@@ -135,7 +135,7 @@ pcs resource list | less
 pcs resource describe IPaddr2
 
 # Create Filesystem resource
-## macke sure that /dev/sdc1 exist on all nodes!!!
+# macke sure that /dev/sdc1 exist on all nodes!!!
 # use pcs resource show
 pcs resource create httpfs Filesystem device=/dev/sdc1 directory=/srv/www/htdocs fstype=ext4
 
@@ -143,10 +143,10 @@ pcs resource create httpfs Filesystem device=/dev/sdc1 directory=/srv/www/htdocs
                     name   Type
 pcs resource create myhaip IPaddr2 ip=192.168.4.254 cird_netmask=24 
 
-## In Suse there is HAWK "High Availability Web Console(K in German)
-## User hacluster (set when created cluster) and default pass linux
+# In Suse there is HAWK "High Availability Web Console(K in German)
+# User hacluster (set when created cluster) and default pass linux
 
-## Generic cluster properties
+# Generic cluster properties
 pcs property list --all | less
  maintenance-mde
  no-quorum..
@@ -159,7 +159,7 @@ pcs property set stonit-enabled=false
 # Suse
 crm configure property enable-acl=yes
 
-## Creating resources, monitor, start, stop
+# Creating resources, monitor, start, stop
 open cluster framework == ocf
 On Suse
 crm ra classes
@@ -171,7 +171,7 @@ pcs resource list | less
 pcs resource describe virtual-domain
 
 # Fro the web server we need apache resource agent and
-## an ip address resorce ( going together, use groups and constrains)
+# an ip address resorce ( going together, use groups and constrains)
 
 # Suse
 crm configure edit
@@ -191,13 +191,13 @@ primitive service-apache ocf:heartbeat:apache \
 :wq
 
 ozyper se apache
-## On all the nodes !!!
+# On all the nodes !!!
 zyper in apache2
 crm_mon
 crm resource tab tab
 crm resource cleanup service-apache
 
-## CentOS
+# CentOS
 pcs resource list | less
 pcs resource describe apache
 pcs resource create apache-ip IPaddr2 ip=192.168.4.111 cird_netmask=24
@@ -206,7 +206,7 @@ pcs property set stonit-enabled=false
 pcs resource create apache-service apache
 pcs resource show
 
-## Configure stonit
+# Configure stonit
 # quorum will be configured with corosync
 corosync-quorum
 corosync-quorumtool --help
@@ -223,11 +223,11 @@ crm_mon
                 Must be used with --wait_for_all
 --two_noe: allows fo a 2 node cluster
 
-## On Suse use settings in corosync.conf
+# On Suse use settings in corosync.conf
 
-## on Red Hat
-## Schedule maintenance and bring down the cluster before applaying changes!
-## Or use  systemctl restart corosync node by node when changing these options.
+# on Red Hat
+# Schedule maintenance and bring down the cluster before applaying changes!
+# Or use  systemctl restart corosync node by node when changing these options.
 vi /etc/corosync/corosync.conf
 quorum {
     provider: corosync_votequorum
@@ -242,18 +242,18 @@ systemctl restart corosync
 
 pcs cluster sync
 pcs cluster start -all
-## Verify modifications
+# Verify modifications
 corosync-quorumtool
 
-## Quorum and fencing(stonit) are used to mentain integrity of cluster
+# Quorum and fencing(stonit) are used to mentain integrity of cluster
 # If we want to mover 
 # There are two fencing mechanisms
 #   Power fencig
 #   Fabric fencing
 # Fencing mechanisms are implemented different fencing agents
 
-## Diferent types of Fence
-## Software solutions to prevent failde node to start
+# Diferent types of Fence
+# Software solutions to prevent failde node to start
     disk
     hypervisor
     power switch
@@ -278,7 +278,7 @@ dd if=/dev/urandom of=/etc/cluster/fence_xvm.key bs=1k count=4
 # configure fence_virtd
 fence_virtd -c
 systemctl enable --now fence_virtd
-## Copy shared key to all hipervisors
+# Copy shared key to all hipervisors
 # in all nodes
 mkdir /etc/clustr
 for i in 210 220 230; do scp /etc/cluster/fence_xvm.key 192.168.4.$i:/etc/cluster/; done
@@ -327,7 +327,7 @@ echo c > /proc/sysrq-trigger
 pcs cluster status
 pcs stonith fence server11.example.com    ( server11 is vm)
 
-## Configure storage fencing
+# Configure storage fencing
 # A device is needed to support SCSI reservation
 # RHEL 7 it has a support
 
@@ -342,7 +342,7 @@ pcmk_host_list=FQDN
 pcmk_reboot_action="off"
 meta provides="unfencing"
     This options sets the node status to unfenced after it re-joins the cluster
-## Redundant fencing is configured by using fencing level
+# Redundant fencing is configured by using fencing level
     All level 1 devices are attempted first, before trying level 2 devices
 
 pcs stonit levle add <level> <node> <devices>
@@ -357,7 +357,7 @@ pcs stonith fence hostname
 fence_xvm -o list
 
 
-## on Suse use sbd
+# on Suse use sbd
 sbd -d /dev/watherver message hostname { poweroff | reset } to test
 
 
