@@ -279,6 +279,18 @@ dd if=/dev/urandom of=/etc/cluster/fence_xvm.key bs=1k count=4
 fence_virtd -c
 systemctl enable --now fence_virtd
 ## Copy shared key to all hipervisors
+# in all nodes
+mkdir /etc/clustr
+for i in 210 220 230; do scp /etc/cluster/fence_xvm.key 192.168.4.$i:/etc/cluster/; done
+
+virsh list
+pcs stonit create fence-centos11 fence_xvm port=centos11 pcmk_host_list=server11.example.com
+pcs stonit create fence-centos12 fence_xvm port=centos12 pcmk_host_list=server12.example.com
+pcs stonit create fence-centos13 fence_xvm port=centos13 pcmk_host_list=server13.example.com
+
+# Verify
+crm_mon
+
 # On virtual machines use:
 fence_xvm
 
@@ -315,3 +327,42 @@ echo c > /proc/sysrq-trigger
 pcs cluster status
 pcs stonith fence server11.example.com    ( server11 is vm)
 
+## Configure storage fencing
+# A device is needed to support SCSI reservation
+# RHEL 7 it has a support
+
+# Cluster node will add a key to the shared SCSI device after starting
+# When a node needs to be fenced, the other node will remove the
+#   node key of the fence target
+
+# Options to be used:
+devices=devicepath  ( use /dev/disk/by-id/)
+pcmk_monitor_action=metadata
+pcmk_host_list=FQDN
+pcmk_reboot_action="off"
+meta provides="unfencing"
+    This options sets the node status to unfenced after it re-joins the cluster
+## Redundant fencing is configured by using fencing level
+    All level 1 devices are attempted first, before trying level 2 devices
+
+pcs stonit levle add <level> <node> <devices>
+    pcs stonit level add 1 node1 fence_node1_ilo
+    pcs stonit level add 2 node1 fence_nolde1_apc
+# Use pcs stonith level to view fence level configuration
+pcs stonith level
+pcs stonith level remove 1
+
+pcs stonit show
+pcs stonith fence hostname 
+fence_xvm -o list
+
+
+## on Suse use sbd
+sbd -d /dev/watherver message hostname { poweroff | reset } to test
+
+
+
+
+
+
+fence_scsi     
