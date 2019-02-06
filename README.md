@@ -1,4 +1,4 @@
-#RH clustering
+#H clustering
 # Clustering, Clastering, read from stdin
 corosync on suse
 First node: "node1"
@@ -359,10 +359,153 @@ fence_xvm -o list
 
 # on Suse use sbd
 sbd -d /dev/watherver message hostname { poweroff | reset } to test
-
-
-
-
-
-
 fence_scsi     
+
+## Resource management
+# Resource is anything that is manged by cluster
+# These are scripts used to manage cluster (ocf scripts, systemd scrpts)
+Open cluster framework  : ocf
+in ocf script we can put anyting 
+systemd scripts can be managed from cluster
+stonit resource management
+
+# Resource types
+Primitives  - singular resource that is started ones (like ipaddress)
+Clone       - Managed from cluster and running on multiple nodes in same time ( storage )
+Multy state (aka Master/Slave) - as drbd
+Group       - Group of primitives   ( haipaddres, shared storage, web server)
+
+# Default resource stickiness  ( what to do if primary node failes and after is back, what is happening to resource )
+# Createin resources
+find / -name IPaddr2
+cd /usr/lib/ocf/resource.d/
+vi IPaddr2
+info IPaddr2
+
+# in Suse
+crm configure primitive newip ocf:heartbeat:IPaddr2 params ip=192.168.4.244/24 op monitor interval=10s
+crm recource show newip
+crm_mon
+
+cibadmin -
+
+## CentOS
+pcs status
+pcs resource create mynewip IPaddr2 ip=192.168.4.244
+pcs status
+
+# Working with resources in a cluster!!!!
+# Create resource constraints
+# USIING GROUPS IS BETTER THAN USING CONSTRAINTS!!!
+    Location   - where resource is going to run
+    Colocation
+    Order
+
+# Using score to give priority to node | give lover or higer
+    INFINNITY (1,000,000): must happen
+    -INFINNITY (-1,000,000): must not happen
+# Resouce migration will enforce a constraint on the resource
+    pcs resource move     |      crm migrate
+    pcs resource clerar   |      crm unmigrate
+# -INIFINITY on location constraint will never run the resource on the node 
+# specified, even if the node is the last in the cluster.
+
+# Using constraints
+location constraint
+# will give score of 1000 for mariadb to run on node2
+location db-on_node2 mariadb 1000:node2
+
+# Will start ip before web
+order ip-before-web Mandatory: ip web
+
+# inf == means infinity ( must happen )
+# Drbd can't be promoted from master to slave before ip address is started
+order ip-befoe-DRBD-promote inf:ip:start drbd:promote
+
+# -inf Never web1 and web2 are running in same node
+colocation web1-not-with-web2 -inf: web1 web2
+
+
+## pcs does not need name for the constraints.
+## pcs will add the name automaticaly
+pcs constraint location web prefers node1
+
+# Try to run on node1 if not run on node2
+pcs constraint location web prefers node1=1000; pcs constraint location
+                                                web prefers node2=500
+pcs constraint location web avoids node1
+
+# web1 and db1 should work together
+pcsconstraint colocation add web1 with db1
+
+# web1 and db1 shold be never together!
+pcs constraint colocation add web1 with db1 -INFINITY
+pcs constraint order webip thenn webserver
+
+## Will show all scores.
+crm_simulate -sL
+
+## Using Groups is better solution!!!
+pcs resource create myip IPaddr2 ip=192.168.4.240 --group mygroup 
+pcs resource create myfs Filesystem device=/dev/sdb1 directory=/myfs --group mygroup
+
+# Resources and groups can be created independantly
+# first create resources and then groups
+# this is prefered way
+group mygroup myip myweb
+
+# if one resource fails wholle resource group will fail!!!
+pcs resource creaete ip1 IPaddr2 ip=10.0.0.1 cidr_netmask=24 --group ipgoup
+pcs resource creaete ip2 IPaddr2 ip=10.0.0.2 cidr_netmask=24 --group ipgoup
+pcs status
+
+## Clone
+Primitive that should be started multiple time
+
+## For troublsooting use journalctl -xe or other logs!!!
+# Reset the failcoint on the resource
+
+pcs resource failcount show
+pcs resource debug-start myresource
+pcs resource failcont myresource mynode
+pce resource cleanup myresource
+crm resource cleanup myresource
+
+less /var/log/
+pcs resource describe IPaddr2
+
+# Edit directly xml file
+pcs cluster edit
+
+ip addr show
+pcs resource update ip1 nic=eth0
+pcs resource update ip1 nic=eth1
+
+pcs status
+
+
+pcs resource group add apache-group apche-ip
+pcs resource group add apache-group apache-service
+pcs resource create ftp-ip IPaddr2 ip=192.168.4.222 cidr_netmask=24 --group ftp-group
+pcs resource list | grep -i ftp
+rpm -qa | grep ftp
+yum install vsftpd -y
+
+## this is systmd type resource
+pcs resource create ftp-service systemd:sftpd --group ftp-group
+
+pcs constraint colocation add apache-group with ftp-group -10000
+pcs constraint order apache-group then ftp-group
+
+pcs resource mange
+pcs resource unmange
+
+pcs resource utilization myresource ram=20 cpu=10
+
+# Set ntp sync on cenots 7
+ser2 'timedatectl set-ntp 0; timedatectl set-ntp 1;'
+ser3 'timedatectl set-ntp 0; timedatectl set-ntp 1;'
+
+ssh root@server1 'timedatectl set-ntp 0; timedatectl set-ntp 1;'
+ssh root@server2 'timedatectl set-ntp 0; timedatectl set-ntp 1;'
+

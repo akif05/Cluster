@@ -1,0 +1,148 @@
+top -I 
+top.rc. 
+
+top + f P
+vmstat 2 20
+/proc
+and 
+sysctl
+# to tune parameter in kernel
+# this is run time only
+/proc/sys
+
+# For persistent use sysctl
+# write parameter in sysctl
+# file path in /proc/sys, replace / with . for variable name
+# list off all tunable
+sysctl -a 
+
+cd /proc/sys
+kernel net and vm are most in use
+vm == virtual memory.  = is address space:w
+
+cd kernel
+
+cat hostname
+cat pid_max.   == this is availible pid, can be changed
+cd ../vm
+cat drop_caches.    = it is trigre value
+free -m
+cat 2 > drob_caches
+# can free memmory
+
+ssh ser1
+virsh list
+
+swapins == liklihood system to use swap, biger == sysetem is eager to use swap
+
+# lover value to use less swap, start swaping when 
+
+vi /etc/sysctl.conf
+vm.swappiness = 60
+
+sysctl --help
+
+cd /usr/lib/sysctl.d
+vi 60-libvirtd.conf
+
+# installed progarms are using /usr/lib/sysctl.d
+
+# System admin must use /etc...
+cd /etc/sysctl.d/
+
+echo 10 > swappiness
+
+## keep your tunable settings.
+vi /etc/sysctl.d/50-akif.conf
+
+
+iotop
+
+boni++
+sar
+## write 4GB of data test
+# apply fiwe times
+# important is sys time 
+# real we can not tune, but only sys
+
+time dd if=/dev/zero  of=/4Gfile bs=1M count=4096
+real
+user
+sys  0m2.719s
+
+ext4 is using
+File system journaling (file system integrity)
+
+Copy on write
+man mount
+To have quick file system
+/data=writeback
+kjurnald -- eating processor time implement ext4 with 
+	/data=writeback
+
+ioscheduler
+
+cd /sys/
+cd block/sda
+cd queue
+This queue is used to
+cat scheduler
+noop [deadline] cfq
+# in bracket is active value
+
+# Extend writing data to disk
+noop is giving worse performance
+noop == nooperation (use in vm, or sotrage is on san) 
+complete fair queueng == cfq
+
+echo noop > shceduler
+pwd
+/sys/block/sda/queue
+
+cgroups is resource limitation
+
+¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡
+man 5 systemd resource control
+
+Linux performance leson
+free -m
+cd /proc/sys/vm
+cat nr_hugepages
+free -m
+echo 200 > nr_hugepages
+free -m
+echo h > /proc/sysrq-triger
+echo f > /proc/sysrq-triger
+cd /proc/sys
+cd vm
+ls | grep panic
+panic_on_oom
+
+cat panic_on_oom
+echo 1 > panic_on_om
+echo f > /proc/sysrq-triger
+
+velgraing memory leack issue
+
+
+# network performans
+ip -s link
+qperf
+
+## Statistic about network performance
+qperf server1 tcp_bw tcp_lat
+nc -l 2345 > bigfile on serfver1
+time cat bigfile | nc 
+
+rpm -pa | grep sysstat
+cat /etc/cron.d/sysstat
+ls /var/log/sa
+sar -b
+sar -C
+sar -P ALL
+
+man sar
+
+sar usefull example.
+
+Linux fundation 

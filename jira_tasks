@@ -36,3 +36,153 @@ lin-10-170-0-198
 puppet cert sign lin-10-170-0-198.gridhost.co.uk
 puppet run
 
+Update userpref set value=3 where username like "%dental-design%";
+
+[root@mail3-slave ~]# mysql
+
+mysql> select * from userpref where username like "%dental-desi%";
++----------+---------------------------------------------------+----------------+-------+--------+
+| email_id | username                                          | preference     | value | prefid |
++----------+---------------------------------------------------+----------------+-------+--------+
+|   528416 | smilepod@dental-design-clients.co.uk              | required_score | 4     |  53863 |
+|   528423 | rejuvadent@dental-design-clients.co.uk            | required_score | 4     |  53864 |
+|   528418 | harpendensmiles@dental-design-clients.co.uk       | required_score | 4     |  53865 |
+|   528417 | fairlandsdental@dental-design-clients.co.uk       | required_score | 4     |  53866 |
+|   528419 | edinburghdentalstudio@dental-design-clients.co.uk | required_score | 4     |  53867 |
++----------+---------------------------------------------------+----------------+-------+--------+
+5 rows in set (0.02 sec)
+
+mysql> describe userpref
+    -> ;
++------------+--------------+------+-----+---------+----------------+
+| Field      | Type         | Null | Key | Default | Extra          |
++------------+--------------+------+-----+---------+----------------+
+| email_id   | int(11)      | NO   | MUL | NULL    |                |
+| username   | varchar(100) | NO   | MUL | NULL    |                |
+| preference | varchar(30)  | NO   |     | NULL    |                |
+| value      | varchar(100) | NO   |     | NULL    |                |
+| prefid     | int(11)      | NO   | PRI | NULL    | auto_increment |
++------------+--------------+------+-----+---------+----------------+
+5 rows in set (0.00 sec)
+
+mysql>
+mysql> Update userpref set value=3 where username like "%dental-design%";
+Query OK, 5 rows affected (0.10 sec)
+Rows matched: 5  Changed: 5  Warnings: 0
+
+mysql> select * from userpref where username like "%dental-desi%";
++----------+---------------------------------------------------+----------------+-------+--------+
+| email_id | username                                          | preference     | value | prefid |
++----------+---------------------------------------------------+----------------+-------+--------+
+|   528416 | smilepod@dental-design-clients.co.uk              | required_score | 3     |  53863 |
+|   528423 | rejuvadent@dental-design-clients.co.uk            | required_score | 3     |  53864 |
+|   528418 | harpendensmiles@dental-design-clients.co.uk       | required_score | 3     |  53865 |
+|   528417 | fairlandsdental@dental-design-clients.co.uk       | required_score | 3     |  53866 |
+|   528419 | edinburghdentalstudio@dental-design-clients.co.uk | required_score | 3     |  53867 |
++----------+---------------------------------------------------+----------------+-------+--------+
+5 rows in set (0.01 sec)
+
+
+https://outlook.office.com/owa/?path=/mail/inbox
+https://jira.godaddy.com/browse/PRGN-735
+ssh parayusein@hl242.redcoruna.com -p 2510 
+ rsync -azP root@backup28.srv2.com:/storage/hl242-ljnoqwnm/.zfs/snapshot/1546733884/home_dir/ ./
+
+ rsync -azP root@backup28.srv2.com:/storage/hl242-zpwkobmn/.zfs/snapshot/1548149550 ./
+
+drwxrwxrwx 1 root root 0 Feb  5 07:24 1549340797 ----- Tue  5 Feb 04:26:37 GMT 2019
+drwxrwxrwx 1 root root 0 Feb  5 07:24 1549244375 ----- Mon  4 Feb 01:39:35 GMT 2019
+drwxrwxrwx 1 root root 0 Feb  5 07:24 1549071617 ----- Sat  2 Feb 01:40:17 GMT 2019
+drwxrwxrwx 1 root root 0 Feb  5 07:24 1548992171 ----- Fri  1 Feb 03:36:11 GMT 2019
+drwxrwxrwx 1 root root 0 Feb  5 07:24 1548917966 ----- Thu 31 Jan 06:59:26 GMT 2019
+
+https://deploy.prgn.misp.co.uk/api/v1/cpanel/license/add/dedi/?ip=185.119.175.34
+
+
+
+
+
+
+######### 
+file restore:
+root@hl242 [/home/RC-Antonio]# cd 1548149550/
+root@hl242 [/home/RC-Antonio/1548149550]# pwd
+/home/RC-Antonio/1548149550
+root@hl242 [/home/RC-Antonio/1548149550]# ls -ltr
+total 20
+drwx------ 2 5977 root  4096 May 20  2017 .ssh/
+drwx------ 3 5977 users 4096 May 21  2017 home_dir/
+drwxr-xr-x 4 root root  4096 Feb  5 15:02 ../
+drwxr-xr-x 4 root root  4096 Feb  5 15:11 ./
+
+
+
+
+
+
+
+
+
+Flipping A to RO for a few
+
+zfs set readonly=on storage/sites/a
+zfs destroy storage/sites/a@1547522401 
+zfs destroy storage/sites/a@1547616601 
+zfs set readonly=off storage/sites/a
+
+A sites back to RW
+
+
+https://wiki-001.sl5.misp.co.uk/sysops/index.php/Unmanaged_servers
+
+
+https://jira.godaddy.com/browse/PRGN-525
+https://support-001.prgn.misp.co.uk/ticket/2730332
+
+dell r330
+1x Intel Xeon Quad Core CPU
+16GB DDR4 RAM
+2x 300GB SASStorage
+
+
+digitronix.servers.prgn.misp.co.uk
+no managed
+
+ip addr: 185.119.175.34/24
+vlan 749
+
+Switch:	FPC2:uk.slo.prgn.c10.stk1
+Interface:	ge-2/0/3
+
+
+set interfaces ge-2/0/33 description "To digitronix.servers.prgn.misp.co.uk"
+set interfaces ge-2/0/33 unit 0 family ethernet-switching port-mode access
+set interfaces ge-2/0/33 unit 0 family ethernet-switching vlan members vlan749
+delete interfaces ge-2/0/33 unit 0 family ethernet-switching vlan members vlan12
+
+
+https://netadmin-002.sl5.misp.co.uk/yolozones/index.php?hostname=digitronix.servers.prgn.misp.co.uk&ip=185.119.175.34
+Dns is working!!!
+
+
+https://deploy.prgn.misp.co.uk/api/v1/cpanel/license/add/dedi/?ip=185.119.175.34
+[root@digitronix ~]# /usr/local/cpanel/cpkeyclt
+Updating cPanel license...Done. Update succeeded.
+Building global cache for cpanel...Done
+
+puppet is deployed.
+
+
+https://netadmin-002.sl5.misp.co.uk/passdb/cred/detail/44321/
+
+firewall test mode OFF
+
+
+
+tail -f /var/log/cpanel-install*
+clear
+wget https://download.configserver.com/csf.tgz && tar -xvf csf.tgz && cd csf && sh install.sh; cd /root; sed -i 's/TESTING = "1"/TESTING = "0"/' /etc/csf/csf.conf; csf -r
+curl netadmin-001.sl5.misp.co.uk/puppet/cpanel | bash
+rstpuppet
+/usr/local/cpanel/cpkeyclt
+
