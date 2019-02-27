@@ -13,7 +13,9 @@ All other nodes
 	crm_mon
 	systemctl status corosync
 	
+#4.  Configure corosync on Red Hat
 # Ha on redhad (centos)
+# on all the nodes
 yum -y install epel-release
 yum -y install pcs fence-agents-all
 firewall-cmd --permanent --add-serice=high-availablility 
@@ -207,7 +209,7 @@ pcs resource create apache-service apache
 pcs resource show
 
 # Configure stonit
-# quorum will be configured with corosync
+# quorum will be configured with corosync0
 corosync-quorum
 corosync-quorumtool --help
 crm_mon
@@ -268,6 +270,7 @@ pcs stonith describe
 pcs stonith crearte name fencing_agent
 
 To use fancing device, fencing agent needs to be configured.
+#6. Configure fencing(stonit) on Centos
 # Setting up fence-virtd
 # On hipervisor
 yum -y install fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
@@ -361,7 +364,7 @@ fence_xvm -o list
 sbd -d /dev/watherver message hostname { poweroff | reset } to test
 fence_scsi     
 
-## Resource management
+##7. Resource management
 # Resource is anything that is manged by cluster
 # These are scripts used to manage cluster (ocf scripts, systemd scrpts)
 Open cluster framework  : ocf
@@ -483,7 +486,14 @@ pcs resource update ip1 nic=eth1
 
 pcs status
 
+#7.Lab:
+# Configure two resource groups, one for Apache and one for vsftpd
+# In the groups, have the serices started and give both of them a unique ip addr
+# The resource groups may only run on the same node if there is no
+#   other choice, but by default they should try to avoid one another
+# The vsftpd resource group should be started before the apache resource group
 
+#####
 pcs resource group add apache-group apche-ip
 pcs resource group add apache-group apache-service
 pcs resource create ftp-ip IPaddr2 ip=192.168.4.222 cidr_netmask=24 --group ftp-group
