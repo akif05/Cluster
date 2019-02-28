@@ -494,6 +494,8 @@ pcs status
 # The vsftpd resource group should be started before the apache resource group
 
 #####
+pcs resource create apache-service apache
+pcs resource create apache-ip IPaddr2 ip=192.168.4.111 cird_netmask=24
 pcs resource group add apache-group apche-ip
 pcs resource group add apache-group apache-service
 pcs resource create ftp-ip IPaddr2 ip=192.168.4.222 cidr_netmask=24 --group ftp-group
@@ -501,17 +503,143 @@ pcs resource list | grep -i ftp
 rpm -qa | grep ftp
 yum install vsftpd -y
 
+# Create ftp resource, First vsftp needs to be installed on all the nodes
+# When create a resource cluster will automaticaly try to start the resource!
+# If forget to install the ftp server berfore create the resource,
+# Fail counter needs to be cleared!
 ## this is systmd type resource
-pcs resource create ftp-service systemd:sftpd --group ftp-group
+pcs resource create ftp-service systemd:vsftpd --group ftp-group 
+pcs resource group list
+pcs cluster status
+crm_mon
 
+# Create constraints. 1 resource can not be started together 
+# -10000 Expresess strong preference resource not to be started on same node
+# But if there is no other options, resource still can be on same node
+# infiniti is  used to forbide resources to be on same node
 pcs constraint colocation add apache-group with ftp-group -10000
+
+# Creat order constaraint, first start apache-group and then ftp-group
 pcs constraint order apache-group then ftp-group
+
+# Lab 7 end #################################################
+
+# Lab 8 start ###############################################
+# Managing resource# 
+# Create a dummy resource (dummy resource is ocf resource)
+#	use a constraint to run it on node1 by default
+# Migrate the resource away to node2
+# Remove the migration constraint and see what Happens
+# Put node1 in stndby mode and see wath happens
+# Put node1 in normal mode again
+# Put the resource in unmanaged mode, and node1 in maintenance
+# Restore a fully operational situation
 
 pcs resource mange
 pcs resource unmange
 
+# Create dummy resource on server1
+# all command are executed from server1!
+pcs resource list | grep -i dummy
+pcs resource describe dummy
+pcs resource create mydummy Dummy op monitor interval=60s
+pcs resource show
+# Create constraint to put it somewere else
+pcs constraint location mydummy prefers server2.example.com
+pcs constraint list
+pcs resource show
+## The abouve command should show that resource is move to started on server2
+
+# Move the mydummy resource from server2
+# The commad will create location constraint automaticaly
+# to ban resource to be used on server2 
+pcs resource move mydummy
+pcs constraint list	
+	Location Constraints:
+	  Enabled on: server2 (score:INFINITY)
+	  Disabled on: server2 (score:-INFINITY) (role: Started)
+	Ordering Constraints:
+	Colocation Constraints:
+	Ticket Constraints:
+pcs resource show
+
+# Remove the migration constration 
+# Clear the -INFINITY constraint that was created automaticaly when 
+# executed "pcs resource move", whele resorce was running on server2
+
+pcs resource clear mydummy
+
+# Put node1 in stndby mode and see wath happens
+# Resource will be moved from server2 to server1
+pcs cluster standby server2.example.com
+pcs resource show
+
+# Resource will be moved from server1 back to server2
+pcs cluster unstendby server2.example.com
+
+# Cluster can be taken down for maintenance
+# To guarantie that resource wont be afected negatively 
+# Put the resource in unmanaged mode, and node1 in maintenance
+pcs resource unmanage mydummy
+pcs resource show 
+
+# Restore a fully operational situation
+pcs resource manage mydummy
+# Lab 8 End   ###############################################
+
+# Lab 9 start ###############################################
+# Create active/passive DRBD config between two nodes
+# Make sure that the device is sincronizing, but do not
+# enable DRBD systemd unit file for automaitc startup
+Install drbd and drbd-utils software
+cat /proc/partitions # to deside wich device will be used
+vi /etc/drbd.d/drbd0.res
+resource drbd0 {
+	protocol C;
+disk {
+	on-io-error pass_on;
+}
+on server1 {
+	disk /dev/sdb;
+	device /dev/drbd0;
+	address 192.168.4.210:7676;
+	meta-disk internal;
+}
+on server2 {
+	disk /dev/sdb;
+	device /dev/drbd0;
+	address 192.168.4.220:7676;
+	meta-disk internal;
+}
+}
+:wq
+scp drbd0.res server2:/etc/drbd.d/
+drbdadm dump all
+
+# if 'drbdadm dump all' does not complain
+# Create device on both nodes
+# on both of the nodes run following commnad
+dbrdadm -- --ignore-sanity-checks create-md drbd0
+
+# On server1 run:
+drbdadm up drbd0
+drbd-overview
+drbdadm primary --force drbd0
+
+# On the server2
+drbdadm up drbd0
+
+# Even before sync is finished we can create file system on the primary(server1)
+
+
+
+
+
+# Lab 9 end   ###############################################
+  
 pcs resource utilization myresource ram=20 cpu=10
 
+## End of the Linux HA Red Hat EX436 and LPIC3 304 ##########################
 # Set ntp sync on cenots 7
 ser2 'timedatectl set-ntp 0; timedatectl set-ntp 1;'
 ser3 'timedatectl set-ntp 0; timedatectl set-ntp 1;'
