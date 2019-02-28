@@ -1,0 +1,1223 @@
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+#H clustering
+# Clustering, Clastering, read from stdin
+corosync on suse
+First node: "node1"
+	zypper in ha-cluster-bootstrap
+	ha-cluster-inet
+
+All other nodes
+	zypper in ha-cluster-bootstrap
+	ha-cluster-join -c node1
+
+# Check status
+	crm_mon
+	systemctl status corosync
+
+################################################################################
+	
+#Lab 4.  Configure corosync on Red Hat ########################
+# Ha on redhad (centos)
+# on all the nodes
+yum -y install epel-release
+yum -y install pcs fence-agents-all
+firewall-cmd --permanent --add-serice=high-availablility 
+systemctl enable --now pcsd
+echo password | passwd --stdin hacluster
+
+# Authenticate all nodes. Run the command on one node ONLY!
+pcs cluster auth server1.example.com server2.example.com server3.example.com
+
+Provide hacluster username and password, that was created
+
+pcs cluster setup --start --name mycluster server1.example.com server2.example.com server3.example.com
+
+After reboot node will not join the cluster automaticaly!
+If you want to join automaticaly run:
+	pcs cluster enable --all
+
+# Verify cluster opearation
+pcs cluster status
+systemctl status pcsd
+systemctl status corosync
+systemctl status corosync -l
+
+
+
+# ssh tunnel
+# Working all the 3 for loops !!!!!
+for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh root@$ipaddr 'yum -y install epel-release; \
+					yum -y install pcs fence-agents-all; \
+					firewall-cmd --permanent --add-serice=high-availablility; \ 
+					firewall-cmd --reload; \ 
+					systemctl enable --now pcsd; \
+					echo password | passwd --stdin hacluster'
+					done
+
+####
+for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); ssh root@$ipaddr 'awk "!/192.168.4/" /etc/hosts > temp && mv temp /etc/hosts <<< yes; \
+			printf "192.168.4.210\tserver1.example.com\tserver1\n192.168.4.220\tserver2.example.com\tserver2\n192.168.4.230\tserver3.example.com\tserver3\n" >> /etc/hosts'
+			done
+
+for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); ssh root@$ipaddr 'cat /etc/hosts'
+			done
+
+# Do not use this scripts in production!!!
+# Delete the lines starting with 192.168... from the hosts file
+for i in `seq 1 3`; do ipaddr=$(printf "192.168.4.2%d0\n" $i); echo $ipaddr; ssh root@$ipaddr 'awk "!/192.168/" /etc/hosts > temp && mv temp /etc/hosts <<< yes'
+			done
+#
+################################################################################
+
+
+
+# CIB = Cluster Information Base
+Cluster information base is inmemory state of the Cluster
+
+Crmd is 
+# CIB = Cluster Information Base
+Cluster information base is inmemory state of the Cluster
+It is running  in all nodes
+
+Crmd is  rununig on all nodes to provide access to CIB
+Cluster Resource Management Daemon
+
+If node needs to creport for a change it is sending infor ot CRMD in all nodes
+CRMD is passing ifor ot CIB
+
+Local Resource Manager Daemon
+Local service manager
+
+
+pcs is command line tool to talks pcsd which talks to crmd
+pcsd is daemon syncronizes between nodes and
+allowes pcs to issue commands that realate to entyer cluster
+including creation of the cluster.
+
+On Suse crmsh is command to speack directly to crmd
+crmsh  = crmshell
+crm tab tab
+cibadmin ==== is used to modify cluster config xml code
+
+# Qurey 
+cibadmin -Q | less
+
+crm configure tab tab
+# Show the cluster information
+crm configure show
+crm configure edit
+
+crm configure     == opens live shel
+crm configure
+# Create ip address resource and monitor it every 20 seconds
+primive newip ocf:heartbeat:IPaddr2 params ip=192.168.122.55 op monit interval=20s
+exit
+
+# write configuration into file
+crm configure save cluster-$(date +%m-%d)-01.txt
+
+# Destroy everyting
+cibadmin -E --force
+
+# Restore whole cluster from saved config
+crm configure load push cluster-06-19-11.txt
+
+# To find out all specification
+vi /usr/share/pacemaker/crm.dtd
+
+
+# PCS
+# check if pcsd running on all nodes
+systemctl status pcsd
+pcs tab tab
+pcs cluster edit
+export EDITOR=/usr/bin/vi
+# looks licke crm
+# check if bash complition is installed
+# Create modify resources
+pcs resource 
+rpm -q | grep bash-com
+pcs resource list | less
+
+# Resource for HA
+pcs resource describe IPaddr2
+
+# Create Filesystem resource
+# macke sure that /dev/sdc1 exist on all nodes!!!
+# use pcs resource show
+pcs resource create httpfs Filesystem device=/dev/sdc1 directory=/srv/www/htdocs fstype=ext4
+
+# Create an ip address for HA
+                    name   Type
+pcs resource create myhaip IPaddr2 ip=192.168.4.254 cird_netmask=24 
+
+# In Suse there is HAWK "High Availability Web Console(K in German)
+# User hacluster (set when created cluster) and default pass linux
+
+# Generic cluster properties
+pcs property list --all | less
+ maintenance-mde
+ no-quorum..
+ shutdown-escalatiion
+ stonit-enabled
+
+# How to change property in RedHat
+pcs property set stonit-enabled=false
+
+# Suse
+crm configure property enable-acl=yes
+
+# Creating resources, monitor, start, stop
+open cluster framework == ocf
+On Suse
+crm ra classes
+crm ra list ocf
+crm ra info apache
+crm ra info Dumy
+
+pcs resource list | less
+pcs resource describe virtual-domain
+
+# Fro the web server we need apache resource agent and
+# an ip address resorce ( going together, use groups and constrains)
+
+# Suse
+crm configure edit
+
+primitive admin_addr IPaddr2 \
+        params cidr_netmask="24" ip="192.168.4.101" \
+        op monitor interval=10 timeout=20
+
+primitive ip-apache ocf:heartbeat:IPaddr2 \
+        params cidr_netmask="24" ip="192.168.4.102" \
+        op monitor interval=10 timeout=20
+
+primitive service-apache ocf:heartbeat:apache \
+        op stop interval=0 timeout=60 \
+        op start interval=0 timeout=60 \
+        op monitor interval=10 timeout=60 \    
+:wq
+
+ozyper se apache
+# On all the nodes !!!
+zyper in apache2
+crm_mon
+crm resource tab tab
+crm resource cleanup service-apache
+
+# CentOS
+pcs resource list | less
+pcs resource describe apache
+pcs resource create apache-ip IPaddr2 ip=192.168.4.111 cird_netmask=24
+pcs resource show
+pcs property set stonit-enabled=false
+pcs resource create apache-service apache
+pcs resource show
+
+# Configure stonit
+# quorum will be configured with corosync0
+corosync-quorum
+corosync-quorumtool --help
+crm_mon
+
+# pcs cluster setup on Red Hat
+# Specific options can be used to manipulate quorum
+--wait_for_all : wait for all nodes to join the cluster 
+                 before applying quorum calculation
+--auto_tie_break: 50% will give quorum as well.
+                In this case the side with lover ID will win
+--last_man_standing: quorumms recalcualationd every 10sec. which
+                allowes admins to take out quorum nodes one by one.
+                Must be used with --wait_for_all
+--two_noe: allows fo a 2 node cluster
+
+# On Suse use settings in corosync.conf
+
+# on Red Hat
+# Schedule maintenance and bring down the cluster before applaying changes!
+# Or use  systemctl restart corosync node by node when changing these options.
+vi /etc/corosync/corosync.conf
+quorum {
+    provider: corosync_votequorum
+    last_man_standing: 1
+    wait_for_all: 1
+    auto_tie_breaker: 1
+    auto_tie_breaker_node: lowest
+}
+:wq
+
+systemctl restart corosync
+
+pcs cluster sync
+pcs cluster start -all
+# Verify modifications
+corosync-quorumtool
+
+# Quorum and fencing(stonit) are used to mentain integrity of cluster
+# If we want to mover 
+# There are two fencing mechanisms
+#   Power fencig
+#   Fabric fencing
+# Fencing mechanisms are implemented different fencing agents
+
+# Diferent types of Fence
+# Software solutions to prevent failde node to start
+    disk
+    hypervisor
+    power switch
+    management board     === ilo or drac
+    test agents
+
+fence_apc --help
+pcs stonith list
+
+pcs stonith list
+pcs stonith describe
+pcs stonith crearte name fencing_agent
+
+To use fancing device, fencing agent needs to be configured.
+#6. Configure fencing(stonit) on Centos
+# Setting up fence-virtd
+# On hipervisor
+yum -y install fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+# Create shared secret
+mkdir -p /etc/cluster
+dd if=/dev/urandom of=/etc/cluster/fence_xvm.key bs=1k count=4
+# command above will create random key 4KB 
+# configure fence_virtd
+fence_virtd -c
+systemctl enable --now fence_virtd
+# Copy shared key to all hipervisors
+# in all nodes
+mkdir /etc/clustr
+for i in 210 220 230; do scp /etc/cluster/fence_xvm.key 192.168.4.$i:/etc/cluster/; done
+
+virsh list
+pcs stonit create fence-centos11 fence_xvm port=centos11 pcmk_host_list=server11.example.com
+pcs stonit create fence-centos12 fence_xvm port=centos12 pcmk_host_list=server12.example.com
+pcs stonit create fence-centos13 fence_xvm port=centos13 pcmk_host_list=server13.example.com
+
+# Verify
+crm_mon
+
+# On virtual machines use:
+fence_xvm
+
+#fence_xvm is used on VMs that are on a fence_virtd hypervisor
+# Copy /etc/cluster/fence_xvm.key from Host to all vms
+
+# Create fence agent
+# Create fence-xvm for all vms
+pcs stonith create fence-vm1 fence_xvmm port="vm1" pcmk_host_list="vm1.example.com"
+    fence-vm1   - Name of the fence device in the cluster
+    fence_xvm   - Nmae of the agent module
+    port        - Specifies the (virsh) name of the vm
+    pcmk_host_list - Cluster node name
+
+# Test the fencing agent
+pcs stonith fence nodename  - thise will reboot the node
+pcs stonith fence --off     - these will remove the fencing
+
+# Monitor multicast traffic!!
+tcpdump -i virbr -s0 -vv net 224.0.0.0/4
+
+firewall-cmd --permanent --dirct --add-rule ipv4 filter INPUT 0 -m pkttype --pkt-type multicast -j ACCEPT
+    OR USE NEXT COMMAND
+firewall-cmd --permanent --add-port=1229/udp
+
+systemctl status fence_virtd
+virsh list
+
+pcs stonit show 
+
+# thise will frize virtual mashin ( run command on the vm to freez it)
+echo c > /proc/sysrq-trigger
+
+pcs cluster status
+pcs stonith fence server11.example.com    ( server11 is vm)
+
+# Configure storage fencing
+# A device is needed to support SCSI reservation
+# RHEL 7 it has a support
+
+# Cluster node will add a key to the shared SCSI device after starting
+# When a node needs to be fenced, the other node will remove the
+#   node key of the fence target
+
+# Options to be used:
+devices=devicepath  ( use /dev/disk/by-id/)
+pcmk_monitor_action=metadata
+pcmk_host_list=FQDN
+pcmk_reboot_action="off"
+meta provides="unfencing"
+    This options sets the node status to unfenced after it re-joins the cluster
+# Redundant fencing is configured by using fencing level
+    All level 1 devices are attempted first, before trying level 2 devices
+
+pcs stonit levle add <level> <node> <devices>
+    pcs stonit level add 1 node1 fence_node1_ilo
+    pcs stonit level add 2 node1 fence_nolde1_apc
+# Use pcs stonith level to view fence level configuration
+pcs stonith level
+pcs stonith level remove 1
+
+pcs stonit show
+pcs stonith fence hostname 
+fence_xvm -o list
+
+
+# on Suse use sbd
+sbd -d /dev/watherver message hostname { poweroff | reset } to test
+fence_scsi     
+
+##7. Resource management
+# Resource is anything that is manged by cluster
+# These are scripts used to manage cluster (ocf scripts, systemd scrpts)
+Open cluster framework  : ocf
+in ocf script we can put anyting 
+systemd scripts can be managed from cluster
+stonit resource management
+
+# Resource types
+Primitives  - singular resource that is started ones (like ipaddress)
+Clone       - Managed from cluster and running on multiple nodes in same time ( storage )
+Multy state (aka Master/Slave) - as drbd
+Group       - Group of primitives   ( haipaddres, shared storage, web server)
+
+# Default resource stickiness  ( what to do if primary node failes and after is back, what is happening to resource )
+# Createin resources
+find / -name IPaddr2
+cd /usr/lib/ocf/resource.d/
+vi IPaddr2
+info IPaddr2
+
+# in Suse
+crm configure primitive newip ocf:heartbeat:IPaddr2 params ip=192.168.4.244/24 op monitor interval=10s
+crm recource show newip
+crm_mon
+
+cibadmin -
+
+## CentOS
+pcs status
+pcs resource create mynewip IPaddr2 ip=192.168.4.244
+pcs status
+
+# Working with resources in a cluster!!!!
+# Create resource constraints
+# USIING GROUPS IS BETTER THAN USING CONSTRAINTS!!!
+    Location   - where resource is going to run
+    Colocation
+    Order
+
+# Using score to give priority to node | give lover or higer
+    INFINNITY (1,000,000): must happen
+    -INFINNITY (-1,000,000): must not happen
+# Resouce migration will enforce a constraint on the resource
+    pcs resource move     |      crm migrate
+    pcs resource clerar   |      crm unmigrate
+# -INIFINITY on location constraint will never run the resource on the node 
+# specified, even if the node is the last in the cluster.
+
+# Using constraints
+location constraint
+# will give score of 1000 for mariadb to run on node2
+location db-on_node2 mariadb 1000:node2
+
+# Will start ip before web
+order ip-before-web Mandatory: ip web
+
+# inf == means infinity ( must happen )
+# Drbd can't be promoted from master to slave before ip address is started
+order ip-befoe-DRBD-promote inf:ip:start drbd:promote
+
+# -inf Never web1 and web2 are running in same node
+colocation web1-not-with-web2 -inf: web1 web2
+
+
+## pcs does not need name for the constraints.
+## pcs will add the name automaticaly
+pcs constraint location web prefers node1
+
+# Try to run on node1 if not run on node2
+pcs constraint location web prefers node1=1000; pcs constraint location
+                                                web prefers node2=500
+pcs constraint location web avoids node1
+
+# web1 and db1 should work together
+pcsconstraint colocation add web1 with db1
+
+# web1 and db1 shold be never together!
+pcs constraint colocation add web1 with db1 -INFINITY
+pcs constraint order webip thenn webserver
+
+## Will show all scores.
+crm_simulate -sL
+
+## Using Groups is better solution!!!
+pcs resource create myip IPaddr2 ip=192.168.4.240 --group mygroup 
+pcs resource create myfs Filesystem device=/dev/sdb1 directory=/myfs --group mygroup
+
+# Resources and groups can be created independantly
+# first create resources and then groups
+# this is prefered way
+group mygroup myip myweb
+
+# if one resource fails wholle resource group will fail!!!
+pcs resource creaete ip1 IPaddr2 ip=10.0.0.1 cidr_netmask=24 --group ipgoup
+pcs resource creaete ip2 IPaddr2 ip=10.0.0.2 cidr_netmask=24 --group ipgoup
+pcs status
+
+## Clone
+Primitive that should be started multiple time
+
+## For troublsooting use journalctl -xe or other logs!!!
+# Reset the failcoint on the resource
+
+pcs resource failcount show
+pcs resource debug-start myresource
+pcs resource failcont myresource mynode
+pce resource cleanup myresource
+crm resource cleanup myresource
+
+less /var/log/
+pcs resource describe IPaddr2
+
+# Edit directly xml file
+pcs cluster edit
+
+ip addr show
+pcs resource update ip1 nic=eth0
+pcs resource update ip1 nic=eth1
+
+pcs status
+
+################################################################################
+Lab 7: Resource management
+Configure two resource groups, one for Apache, one for vsftpd. 
+In the groups, have the services started and give both of them a unique IP address. 
+The resource groups may only run on the same node if there is no other choice, 
+but by default they should try to avoid one another. And the vsftpd resource group 
+should be started before the Apache resource group.
+
+Solution:
+ In this lab, we need to create two groups. The first group is kind of complicated 
+ because it is going to be used to add some existing resources. In order to do that, 
+ we need pcs resource group add. Let's call it apache-group and let's put in apache-ip. 
+ Let's repeat this for apache-service as well. Now if you do pcs resource group list, 
+ we can see that we have apache group with apache-ip and apache-service included in it. 
+ Now that we have created the apache group, we can create the ftp, so pcs resource 
+ create ftp-ip, IPaddr2, which is the name of the OCF resource, ip=192.168.4.115 for 
+ example. Make sure that it's a unique IP address that's not already used somewhere 
+ else. Netmask and a --group ftp-group which will add it to group. Now we also need to 
+ create resource for ftp. But what do we have? Well, pcs resource list by grep -i to be 
+ sure on ftp. We can see that we have systemd vsftpd. So this resource shows because 
+ on this system vsftpd has already been installed. This is one of the most common 
+ errors people are make when work resources in a cluster environment, it needs to be 
+ installed. Before creating the resource, I want to make sure that it's installed on 
+ all nodes. Rpm-qa by grep ftp, so we got it here. Rp -qa by grep ftp, we don't have 
+ it here so let's install it. In here also, yum install -y vsftpd. You better make 
+ sure that you meet all conditions before creating the resource, because the cluster 
+ will automatically try to start the resource directly after you have created it. 
+ If it fails, you need to reset the fail counter and that's additional work to do, 
+ you don't want to do that. Now that we've got it installed everywhere, we can use 
+ pcs resource create ftp-service and the name is vsftpd, no parameters because this 
+ is just a system d service so the cluster really is just taking all the tasks from 
+ the system d service manager. - -group ftp-group There we can see that it is 
+ complaining, unable to create resource vsftpd, it is not installed on this system. 
+ Well we just need to be more specific here. If we use systemd:vsftpd, it does 
+ understand. If you just specify the name of the resource agent, the pcs utility 
+ automatically assumes that it's a resource agent that is an OCF resource. If that 
+ is not the case, you need to be more specific as in this example. Let's use 
+ pcs resource group list to verify that we have the two resource groups. 
+ Now pcs cluster status, which is just showing us that we have four resources 
+ configured and crm_mon is providing nice and detailed information about what is 
+ happening. You can definitely see the hierarchy of the resource groups in here, 
+ so apache group with the resources belonging to it and the ftp group with the 
+ resources belonging to it. So far, so good. All we need to do now is create the 
+ constraints. Pcs constraint colocation add apache-group with ftp-group -10000. 
+ We don't want to do -infinity because that means never and -infinity may bring you 
+ to a situation where there is still sufficient nodes available in the cluster but 
+ the constraint makes sure that the resources cannot be started together. - 10000 
+ expresses a strong preference for the resources not being together, but if there 
+ is no other choice, this constraint will allow the resources to be grouped together. 
+ And finally, we need to add the order constraint and in order to do so, 
+ we use pcs constraint order apache-group then ftp-group. 
+ This is adding the order constraint and that's all we needed to do for this lab.
+
+################################################################################
+################################################################################
+################################################################################
+
+Lab 8:
+Create a dummy resource. And use a constraint to run it on node1 by default. 
+You should notice that the dummy resource, actually is an ocf resource, 
+so that's something that you can really configure. Next, you migrate the 
+resource away to node2, and have a look at the migration constraint, 
+and next remove the migration constraint. Then, put node1 in standby 
+mode and see what happens to the resource. And put node1 in normal mode again. 
+Also, put the resource in unmanaged mode and node1 in maintenance mode and see 
+what's happening. Once, you've figured out everything that's happening, 
+you can restore the fully operational situation.
+
+Solution:
+ So let's start by creating the dummy resource. You may not have heard of it. 
+ But the dummy resource really is a resource. So if you do pcs resource list and 
+ grep on dummy, you can find that there's ocf heartbeat Dummy, ocf pacemaker Dummy, 
+ with an upper case D, which basically is the same resource. So if you use pcs resource 
+ describe Dummy, you can get information about the resource and what it is doing. 
+ As the description is mentioning, it's doing nothing. It's just there to test you 
+ creating resources in the cluster. So to create the resource, we need pcs resource 
+ create. Then we need a name. Let's call it mydummy. And next we need to specify the 
+ ocf resource type, which is Dummy. And finally let's throw in a monitor operation 
+ as well and set it to an interval of 60 seconds. There we go. 
+ Pcs resource show is showing us the dummy has been started on centos11.example.com. 
+ So at this point, we have the resource running on centos11. 
+ Let's create a constraint to push it somewhere else. Pcs constraint location. 
+ The pcs contraint command does need to specify to know what type of constraint it is. 
+ Mydummy prefers let's say centos12.example.com. And now if we do pcs constraint list, 
+ then we can verify that the constraint exists. And if we use pcs resource show, 
+ we can verify that the resource has been moved to centos12.example.com. 
+ And now we need to migrate the resource away to somewhere else. 
+ To do that, we use pcs resource move mydummy. And we can see the resource. 
+ So it is telling us creating location constraint with the name cli ban mydummy on 
+ centos12.example.com with a score of minus infinity. That means that this resource 
+ will never be able to run on centos12.example.com even if it is the last node in the 
+ cluster. We will fix that in the next step where we are going to use pcs resource 
+ clear. But before doing that, let's use the pcs constraint list again. 
+ Where we can see that the resource is enabled and it is disabled. 
+ Now, isn't this funny? It was pushed by the constraint on centos12 
+ with a score of infinty. And now with the pcs resource move, we have disabled it 
+ with minus infinity. And let's use pcs resource show once more. Where we can see that 
+ right now the resource is running on centos11.example.com. And now we can use pcs 
+ resource clear mydummy, which is going to clear the minus infinity constraint. 
+ And as you can see, we now only have the location constraint. So pcs resource show 
+ is showing that it is back on centos12. Next, we need to put some nodes in standby 
+ mode. So pcs cluster standby centos12.example.com. Now let's use pcs resource show, 
+ and we can see that the resource has moved to centos11 again. So now we are going 
+ to unstandby the nodes that we have just standbyed. And that is pcs cluster unstandby. 
+ And now if we use pcs resource show again, we can see that the resource is running 
+ again on centos12. Final step, we are going to put the resource in unmanaged modes 
+ and node one in maintenance mode. So pcs resource unmanage, whoops, 
+ I'm forgetting to put the name of the resource. So there we go. 
+ Pcs resource show is showing that currently it is unmanaged. 
+ And that means that the cluster is no longer observing it. Now, this is a very nice 
+ solution if you are going to do maintenance on the cluster stack because this allows 
+ you to temporarily disable the cluster stack and that won't negatively affect the 
+ state of the resource. Now, when you are finished your maintenance, you are going 
+ to use pcs resource manage mydummy again to put it back in manage mode. 
+ And that is all we needed to do in this lab.
+#7.Lab:
+# Configure two resource groups, one for Apache and one for vsftpd
+# In the groups, have the serices started and give both of them a unique ip addr
+# The resource groups may only run on the same node if there is no
+#   other choice, but by default they should try to avoid one another
+# The vsftpd resource group should be started before the apache resource group
+
+#####
+pcs resource create apache-service apache
+pcs resource create apache-ip IPaddr2 ip=192.168.4.111 cird_netmask=24
+pcs resource group add apache-group apche-ip
+pcs resource group add apache-group apache-service
+pcs resource create ftp-ip IPaddr2 ip=192.168.4.222 cidr_netmask=24 --group ftp-group
+pcs resource list | grep -i ftp
+rpm -qa | grep ftp
+yum install vsftpd -y
+
+# Create ftp resource, First vsftp needs to be installed on all the nodes
+# When create a resource cluster will automaticaly try to start the resource!
+# If forget to install the ftp server berfore create the resource,
+# Fail counter needs to be cleared!
+## this is systmd type resource
+pcs resource create ftp-service systemd:vsftpd --group ftp-group 
+pcs resource group list
+pcs cluster status
+crm_mon
+
+# Create constraints. 1 resource can not be started together 
+# -10000 Expresess strong preference resource not to be started on same node
+# But if there is no other options, resource still can be on same node
+# infiniti is  used to forbide resources to be on same node
+pcs constraint colocation add apache-group with ftp-group -10000
+
+# Creat order constaraint, first start apache-group and then ftp-group
+pcs constraint order apache-group then ftp-group
+
+# Lab 7 end ################################################# 
+ 
+ 
+# Lab 8 start ###############################################
+# Managing resource# 
+# Create a dummy resource (dummy resource is ocf resource)
+#	use a constraint to run it on node1 by default
+# Migrate the resource away to node2
+# Remove the migration constraint and see what Happens
+# Put node1 in stndby mode and see wath happens
+# Put node1 in normal mode again
+# Put the resource in unmanaged mode, and node1 in maintenance
+# Restore a fully operational situation
+
+pcs resource mange
+pcs resource unmange
+
+# Create dummy resource on server1
+# all command are executed from server1!
+pcs resource list | grep -i dummy
+pcs resource describe dummy
+pcs resource create mydummy Dummy op monitor interval=60s
+pcs resource show
+# Create constraint to put it somewere else
+pcs constraint location mydummy prefers server2.example.com
+pcs constraint list
+pcs resource show
+## The abouve command should show that resource is move to started on server2
+
+# Move the mydummy resource from server2
+# The commad will create location constraint automaticaly
+# to ban resource to be used on server2 
+pcs resource move mydummy
+pcs constraint list	
+	Location Constraints:
+	  Enabled on: server2 (score:INFINITY)
+	  Disabled on: server2 (score:-INFINITY) (role: Started)
+	Ordering Constraints:
+	Colocation Constraints:
+	Ticket Constraints:
+pcs resource show
+
+# Remove the migration constration 
+# Clear the -INFINITY constraint that was created automaticaly when 
+# executed "pcs resource move", whele resorce was running on server2
+
+pcs resource clear mydummy
+
+# Put node1 in stndby mode and see wath happens
+# Resource will be moved from server2 to server1
+pcs cluster standby server2.example.com
+pcs resource show
+
+# Resource will be moved from server1 back to server2
+pcs cluster unstendby server2.example.com
+
+# Cluster can be taken down for maintenance
+# To guarantie that resource wont be afected negatively 
+# Put the resource in unmanaged mode, and node1 in maintenance
+pcs resource unmanage mydummy
+pcs resource show 
+
+# Restore a fully operational situation
+pcs resource manage mydummy
+# Lab 8 End   ###############################################
+
+################################################################################
+Lab 9:
+Configuration in the cluster as well, so that the cluster is going to manage 
+the DRBD device. Notice that in previous lessons, we have done the labs both on the 
+Red Hat stack as on the Sousa stack. 
+DRBD is not something that is supported in Red Hat environments, 
+so this is a lab that you can do just on the Sousa environment
+
+Solution:
+In this lab, I will show you how to install DRBD between two SUSE machines. 
+So, let's start using zipper se drbd to search for DRBD software. 
+You can see that there is drbd, yast-drbd, and drbd-utils. 
+We are going to do with command line, so let's use zipper in drbd and drbd-utils. 
+We need to do that twice, so let me also start it on the second machine. 
+Yes, we wanna install that. Yes, we want to install it here, as well. 
+Alright, let's have a look at /etc/drbd.conf that has been created, 
+and you can see that it consists of two includes, an include of the global_common.conf 
+and an include of the resource files. So, let's take care of these resources. 
+This is all going to be created in drbd.d, but before we get started, let's have a 
+look at the /proc/partitions file. In the /proc/partitions file, we can see that a 
+second device has been added, which is the KVM virtual device, vdb. 
+I'm going to use this vdb device in DRBD, and that should give us a nice 20 gigabytes 
+DRBD device. So, let's have a look here, as well. We should see the vdb device, also. 
+Alright, now we can start typing and create some resource files, and there is a 
+drbd0.res that I'm going to create for the device that will have the name drbd0. 
+So, resource is going to be drbd0. Protocol is going to be protocol C:, 
+and then we have the disk specification, where we are specifying on-io-error pass on. 
+Next, we can specify the actual configuration, so, on opensuse21, 
+this needs to be the node name in DRBD, so make sure you are using the right thing here. 
+Disk /dev/vdb, don't forget the semicolon at the end of the line. Device /dev/drbd0, 
+address is the address that this machine is using, which is 122.21:7676, 
+which is the unique port for this device, and meta-disk internal, to specify how it 
+should handle its metadata, and on opensuse22, we are doing something that is, 
+basically, similar. Also, the vdb device /dev/drbd0, and the address of this machine is
+ 192.168.122.22, and also a meta-disk internal. We close this section, 
+ we close the other section, and that basically concludes the creation of the 
+ resource. Now, we need to copy this drbd0 resource to the other nodes, 
+ so scp drbd0 to opensuse22:/etc/drbd.d/, and before we start actually configuring, 
+ it's a good idea to use drbdadm dump all. This is giving us a configuration dump, 
+ and this allows us to verify that the configuration is correct. 
+ Now, what do we see? 
+ We see here "Parse error while parsing value "pass for on-io-error, 
+ value is not valid. "allowed values are pass_on "or call-local-io-error or detach", 
+ then we can also see that there's a semicolon expected, so, apparently, 
+ I made a mistake here on line four, and we need pass_on, and I don't know what 
+ I was thinking here. This is definitely wrong. So, pass_on, let's try it again. 
+ And now we don't see any complaints, so this is looking quite alright. 
+ So, now that we have copied the file, we can create the device on both nodes. 
+ Drbdadm is the command to use. Dash dash, dash dash, ignore-sanity-checks, 
+ create-md drbd0. That's looking good, so let's copy this command and run it on 
+ the other machine as well. New drbd meta data block successfully created, seems 
+ okay, so now on one of the nodes, we can use drbdadm up drbd0 to bring the device 
+ up. So, we are the 506th user to install this version. Now, isn't that nice. 
+ Well, I don't know because I just wanna know if this device is working. 
+ Drbd-overview is the command to be using. So, we can see that there is some 
+ inconsistency and connects, and connecting secondary and unknown, and inconsistent 
+ and, probably we need to wait for a little bit, but that might also be because 
+ we are still in the process of setting up this device. So, what if we are going 
+ to use drbd-overview? On the other node, doesn't show as much, but that is, 
+ as I just mentioned, because we have not set up the device yet. So, let's continue, 
+ and let's type drbdadm primary dash dash force drbd0, and now we can monitor using 
+ drbd-overview. So, we have connect and connecting primary unknown and up to date 
+ and unknown, so what's going to happen? Well, probably we need to run it on the 
+ other node as well. Drbdadm up drbd0, and now we'll just have to wait. 
+ So, now we can see that, immediately it follows in a primary secondary state, 
+ up to date inconsistent, it is just connected and this'll take a while, 
+ but it will get there. Even before the device is completely synchronized, 
+ you can start using it, and you can now continue and create the file system on top of 
+ the device, and this is basically all that was asked for in this lab, 
+ just to set up the basics of the drbd device. Now, from here you need to 
+ decide where to go, and normally, you would continue creating a cluster resource to 
+ manage the DRBD device, or you would enable the systemd unit file for DRBD to ensure 
+ that it automatically starts, or you may, if you use drbdadm up on the DRBD device, 
+ to bring it up manually. And that's all for this lab.
+ 
+# Lab 9 start ###############################################
+# Create active/passive DRBD config between two nodes
+# Make sure that the device is sincronizing, but do not
+# enable DRBD systemd unit file for automaitc startup
+Install drbd and drbd-utils software
+cat /proc/partitions # to deside wich device will be used
+vi /etc/drbd.d/drbd0.res
+resource drbd0 {
+	protocol C;
+disk {
+	on-io-error pass_on;
+}
+on server1 {
+	disk /dev/sdb;
+	device /dev/drbd0;
+	address 192.168.4.210:7676;
+	meta-disk internal;
+}
+on server2 {
+	disk /dev/sdb;
+	device /dev/drbd0;
+	address 192.168.4.220:7676;
+	meta-disk internal;
+}
+}
+:wq
+scp drbd0.res server2:/etc/drbd.d/
+drbdadm dump all
+
+# if 'drbdadm dump all' does not complain
+# Create device on both nodes
+# on both of the nodes run following commnad
+dbrdadm -- --ignore-sanity-checks create-md drbd0
+
+# On server1 run:
+drbdadm up drbd0
+drbd-overview
+drbdadm primary --force drbd0
+
+# On the server2
+drbdadm up drbd0
+
+################################################################################
+Lab 10: Configure iSCSI SAN
+Configure an HA iSCSI target on top of DRBD
+
+This lab is about configuring an HA iSCSI target on top of DRBD. 
+This lab can be done on Souza only because DRBD needs Souza. 
+But even if you are watching this course for your Red Hat RHCA exam, 
+I would highly recommend you to walk through this lab because it's a very 
+insightful lab, and you will learn a lot of it. So in this lab you are going to 
+configure a highly available iSCSI SAN. This SAN offers an ISCSI target on top 
+of a DRBD device. Make it such that when the current DRBD master drops, 
+the slave will be promoted. And the iSCSI target service should always follow the master.
+Think about architecture and requirements before starting to work on this lab. 
+That's something you should do in clustering anytime, by the way. 
+If you think about the solution that you wanna build, then your solution in general 
+will be better. So don't just start typing and configuring software, but make sure 
+you know where you want to go to
+
+Solution:
+In the previous lab, we have created the DRBD device. And this DRBD device took 
+some time, but it is synchronized now. We haven't done anything with it, 
+and that's exactly the purpose of what I wanted to do, because in this lab, 
+we are going to create a highly available open source SAN. That means, 
+that on top of the DRBD, we are going to install iSCSI, and in order to do so, 
+we need a DRBD master slave relationship that is managed by by the closer. 
+And on top of that, we need an iSCSI target resource. So to start with, let's create the
+ configuration in the closer for the master slave relationship. So, CRM configure, edit. 
+And we need to create a primitive drbd. Well, in fact, whatever, let's call it r0 for 
+resource zero, and ocf colon linbit, colon drbd. This primitive needs parameters, so 
+params drbd resource equals drbd zero. It is very important that this resource name 
+corresponds to the name of the resource as it was created from the drbd source here. 
+Operation monitor interval is 15. We want a regular monitoring. Our role equals Master. 
+And another operation, monitor interval equals 30, role equals Slave. This is a master 
+slave resource, and as such, we need to specify monitoring for the master as well as the 
+slave individually. Next, we need to define the master slave resource itself in the 
+closer, and we do that by using ms. Ms dash drbd dash r0. That's going to be the name 
+of the master slave resource. Drbd r0 is the primitive that we are going to configure 
+in this resource. So meta master dash max equals one. We wanna have one master only. 
+And master node max equals one, also one master node only. Clone max equals two. 
+A master slave is a specific case of a clone device, and the clone in total can have two. 
+Clone node max equals one, is specifying that we want to have one instance of the 
+clone on a node at the same time. And notify equals true. 
+Make sure that notification has been set up. Oh, and we made an error. 
+So no, we don't want to commit. Oops, that wasn't too smart, because now I can type 
+it all over again. So, I typed it all again. And before I'm getting out of here, 
+let's choose the mouse and copy it, which is always smart if you have typed a 
+lot in the crm configuration editor. Now we can verify to find out if it's working 
+alright. And here we can see the master slave set drbd zero, and the masters is an 
+opensuse21, the slave is an opensuse22, and we can see a failed action as well. 
+This failed action is not pretty, but I'm going to ignore it for now. It says that 
+drbd resource monitor on opensuse23 not installed. In fact, we should add a negative 
+location constraint, to make sure that this resource will never ever start on the node, 
+where it's not supposed to be starting. In the second part of this lab, we need to take 
+care of the iSCSI target itself. Now the iSCSI target can be set up locally using 
+YaST or Target CLI. We want to create the entire configuration in the closer, 
+and that means that we are not going to deal with anything local. 
+We are going to deal with closer resources. Let me show you crm ra. And we type classes, 
+and we can see the classes that exists, and if you type lists on ocf, 
+then we can see that there are a couple of ocf resources related to iSCSI. 
+There's iSCSITarget, and there is iSCSILogicalUnit, and we need both of them. 
+Now let me show you info on iSCSITarget, to display the required properties. 
+And you can see that this is a collection of quite a few properties. 
+There's the implementation, where we need to specify that this is lio. 
+There's the iqn, the unique identifier for this iSCSITarget. 
+There are some optional properties as well, including the portals, including the 
+allowed_initiators. Notice that on a target level, you can allow initiators to get in, 
+but you can do that also on the lun level. As you can see, if this parameter is 
+empty or not set, access to this target will be allowed from any initiator. 
+Then there's some additional parameters as well, like incoming_username, 
+incoming_password. Let's also have a look at the iSCSILogicalUnit. 
+Same here, there's an implementation, there's a target_iqn. 
+This target_iqn is going to connect this specific logical unit to a specific target. 
+There's the lun. Every logical unit needs a lun number, so we need to specify the lun 
+number. And there's a path, and this path is going to specify what exactly is going 
+to be accessed. And that is the drbd master. And then there are some other parameters 
+as well, which you won't need in most cases, except for allowed_initiators. 
+That's a list of iSCSI initiators allowed to connect to this lun, and notice that 
+if this parameter is empty or not set, access to this lun will not be allowed from 
+any initiator, if target is not in demo mode. So we need to do something with this. 
+And I have already created the result, so let me show you crm configure edit. 
+And what did I do? Well, it is right here to start with. So we have a primitive iSCSI IP,
+which is an IP address, because any service in the closer needs a unique IP address. 
+Services in the closer cannot bind to a node specific IP address, it needs to be an 
+IP address that is going to be available at all time. We have a primitive iSCSI lun, 
+which is the lun that I'm going to define here. So this is the iSCSILogicalUnit. 
+So what do we have? We have the implementation lio, the target_iqn, which relates 
+to the specific target. The path, which is the active drbd device, the lun number, 
+and the allowed_initiators, which is basically the acl. And of course this matches 
+the iSCSI dot initiator name on the iSCSI client. And then we have the 
+primitive iSCSITarget. ISCSITarget, which has an implementation set to lio, 
+and its iqn set to whatever you wanna be, in fact. Next, there is the group. 
+ISCSIgroup, iSCSI IP, iSCSITarget, iSCSIlun. This is going to keep it all together. 
+Then we have the master slave device, and we need to specify an ordering constraint. 
+So order iSCSIGroup after drbd, in which we are first going to specify master 
+slave drbd r0 and iSCSIGroup. And the result? Well, let's have a look at crm mon, 
+and you can see that the drbd master, currently is on opensuse21. We can see that 
+the resource group iSCSIGroup, is also on opensuse21. So now, all we need to do 
+from the iSCSI initiator, is to connect to the unique iSCSITarget IP address, 
+and we've got ourselves a high available opensource SAN-solution.
+
+
+################################################################################
+11.2
+Configure Multipath
+It starts with the installation of the software. If you're on Red Hat, 
+that will be yum install device mapper multipath. On Suse, it's the same package, 
+by the way. Next, you can use the mpathonf utility to generate the multipath 
+configuration file. Mpathconf is automating that in a fancy way. 
+It allows you to use mpathconf dash dash enable with multipathd and optionally 
+with chkconfig which will enable the multipath device and create a 
+multipath configuration file for you. Without this command, you won't have a 
+configuration file and you cannot start the services. If you need to do any fine 
+tuning, you can do that through the configuration file. So you can just use mpathconf 
+dash dash enable to create the basic configuration and make all modifications 
+that you want to the file later. Now in mpathconf, you can find different sections. 
+Like the blacklist section. Blacklist contains a list devices that should never be 
+discovered for multipathing. And that is useful setting that allows you to distinguish 
+between close search devices and local devices. And if you work with blacklist, 
+you can define blacklist exceptions as well. Then there's the default that contains 
+settings for all multipath devices. Any device itself containing specific settings for 
+specific devices. And there's also multipath that contains specific settings for 
+multipaths. If you want to use blacklist, the blacklist can be basedon device nodes, 
+or it can be based on WWID. So the device node is a simple or regular expression, 
+as in caret sda, which is excluding SDA devices. The WWID is an ID that you can figure 
+out for a device using the scsi utility. Here you can see the commands that you should 
+use to figure out the ID you need to exclude. Now, about a default, if you want to get 
+an overview of default values for multiple devices, check user shared 
+doc device mapper multipath multipathd dot confd dot default. 
+That contains basically everything, including some explanation on how it is used. 
+There is a path selector value that can be used to specify the algorithm you want 
+to use. And there's a path grouping policy which sets to failover or multibus. 
+If you set multipath to multibus, you basically increase the bandwidth of 
+your multipath device with the number devices that you have available. 
+And if you use failover, then you have a standby and an active connection. 
+Now, about the devices themselves. Most storage vendors are providing their default 
+and they should already be in the devices section. Especially if you take 
+the annotated multipath configuration file from the example. Optionally, 
+you can include your own device sections as well. If you are going to work with 
+per-device settings, they will override the default settings. Then there's a 
+multipath setting itself. A common option in the multipath settings is the alias. 
+The alias allows you to work with a human readable name for the multipath device. 
+Like in this example, where the alias name is set to shared storage. 
+On some occasions, you will also need to remove multipaths. 
+If that is the case, you first need to remove all physical paths for the multipath, 
+and next you can run multipath dash f on the device to remove it from 
+your configuration. That's all for now for the slides. Let's have a look 
+at the configuration. Now, let me show you how to set up multipathing. 
+Here's the problem. This server has been set up for redundancy. 
+So on this server, I have connected to the two IP addresses on the scsi target to 
+provide for redundant paths. And you can see sda is connecting to the backing storage 
+device vdb5. And the same is the case for sde. It's also vdb5. So that is exactly 
+the problem that multipath is going to fix. You cannot connect to either sda or sde 
+because that's a unique device name. You need to connect to something that sits above 
+these devices. And that is going to be multipath. So let's use yum dash y install 
+device mapper multipath to install the software. And now let's use mpathconf dash dash 
+enable to turn it on. The result should be that there is an atc multipath dot conf, 
+and this atc multipath dot conf contains the current settings. And here you can see 
+that this is quite simple. There's some defaults user friendly names, yes, 
+find multipaths, yes. So this is going to detect multipath environment. 
+Now, there's a multipathd as well. Which is now running and which is providing 
+information about the different multipaths that have been found. 
+Now, if we use multipath dash l, we can get the list of the 
+different multipath devices, and that is exactly what we wanted. 
+So we have user friendly names. We have an mpatha connecting to the backing storage 
+device vdb5. And using two different devices, sda and sde. We have mpathb 
+backing storage device vdb6, and there we have these different devices, sdb and sdf. 
+So what you are going to do instead of connecting to the sda and sdb, 
+you will be connecting to these multipath devices in dev mapper because you can be 
+sure that these multipath devices will always be the same. 
+And that's how you will work with multipathing.
+
+Lab 11: 
+let's do a lab. In this lab, you are going to configure multipath on the iSCSI SAN 
+that you have previously configured. Ensure that the iSCSI initiator connects to the 
+iSCSI target using multipath device, and test that the configuration will survive a 
+device failure. It's up to you how you want to do this lab. You can do it in the 
+fancy way, and if you want to do it fancy, you need redundant network connections. 
+If you don't want to set up redundant network connections, or if your configuration 
+doesn't allow you to, you can still run multipath on a single device. 
+It isn't as useful, but at least it allows you to show how multipath is working and 
+creating a new device for you.
+
+Solution:
+So we are on iscsi an. To start with, it's all about ip addresses. 
+And you can see that this SAN has two IP addresses. One is on 122.100, the other 
+one is on 122.101 Now, in multi-pathing, it's all about redundancy, so if we look at 
+centos13, I've configured this machine with two network interface cards as well. 
+So we can ens9 on 122.220, which is a dynamic IP address, and we can see in eth8 
+zero which is on 122.13. Now, I have done the iscsi discovery on both the 
+100 and 101 IP address and the results is that if you type lsscsi, we don't see four 
+devices, we see eight devices. Whereas you can clearly see by the backing devices that 
+there is doubles involved. So the idea behind all of this multi-pathing is 
+that you should not these dev as DA devices. But you should use something else. 
+And that is why I have installed the device mapper multi-path and I have used the 
+mpath conf. Now, this multi-path configuration is really very simple. 
+I can show you and the multipath.conf that basically, we have default, 
+user_friendly_names, yes, and find_multi-paths, yes, and everything else is 
+commented out. You will need the specific configurations if you are using hardware 
+multi-path devices. We don't have any. What you've got here is basic multi-path all 
+based in software, so no hardware specifics to consider. But as this is all operational,
+we can verify using multi-path dash ll. So, what do we see? We see that the 
+multi-path demon is created to uuid, with the device mapper five, and 
+the device mapper four, and the device mapper 3, and the device mapper two. 
+It has recognized the backing devices, and we can see sizes and we can also see 
+the local device name. So sdd and sdh are right here and sdc and sdg are right here, 
+and we can see the active device as well. And that is how multi-pathing is working. 
+Now, multi-path is only the start of proper storage configuration. 
+Because we now have multi-pathing and it means that I cannot mount devices on dev 
+as DA anymore. I cannot create cursories on dev as da or whatever anymore, 
+I need to do that on the multi-path devices. So how are we going to take care of the 
+naming of these multi-path devices? Well, you can see the user friendly names, 
+mpatha, mpathb, mpathc, and mpathd, or the device number names which are not so user 
+friendly and all of that is handled by the device mapper, so if you go to dev/mapper, 
+you can see, well, you can hardly see the devices involved. So dev/mapper, mpatha, 
+mpathb, mpathc, and mpathd really are the devices that should be used here. 
+As you can see, they point to the dev dm-2, dm-3, dm-4, and so on devices. 
+But really, those are not devices that you want to be using because they don't say 
+anything about what is behind.
+
+on iscsi server3
+ip a
+## will list two ip addresses and client sentos1 will have two ip addresses
+# /dev/sd.. devices should be not use but use device
+# on server1 execute
+lsscsi
+cd /etc
+cat multipath.conf
+default {
+	user_friendly_names yes	
+	find_multipath yes
+}
+:wq
+
+multipath -ll
+cd /dev/mapper
+ls -l
+
+
+################################################################################
+Lab 12: Working with LVM in a Cluster
+In this lab you are going to configure HA LVM. You need to do that on Red Hat 
+because HA LVM is a Red Hat solution to provide exclusive access to an LVM volume 
+in the cluster for use with the XFS file system.
+
+Configure HA LVM in CentOS In order to do so, we need to have some information 
+about the iSCSI devices. All of these machines have already been connected to 
+iSCSI and lsSCSI is showing that. But you can see that vdb5 and all the other 
+iSCSI devices are occurring twice. And that is why we need multipath as well. 
+Multipath has been discussed in the last lesson, and we are just going to test 
+multipath -ll to see if we have multipath devices. I wanna verify that mpatha, 
+which is corresponding to vdb5, is the multipath device that we are going to use. 
+So multipath -ll, here we can also see vdb5 for mpatha and multipath -ll, 
+and same here. Of course, we need to make sure that once we start using this 
+multipath device, that we are going to be consistent, and that we are not going 
+to use it for anything else later on. We can now start setting up the 
+LVM configuration. And I'm going to do that from centos11. 
+So we need pvcreate on dev/mapper/mpatha. And we can see physical volume, 
+/dev/mapper/mpatha successfully created. This is an iSCSI device. 
+And as this is an iSCSI device, we only have to use the pvcreate command on one 
+of the nodes. All the other nodes will pick up this modification automatically, 
+because it's shared storage after all. Now we can continue on this node by 
+using vgcreate. Let's call it vgcluster, and we need to put in the dev/mapper/mpatha 
+again. Successfully created, so that's looking good. 
+Next we use lvcreate, dash L, and we give it the size of 400 megabytes and the name 
+of lvcluster, and we are going to put that in vgcluster. So logical volume lvcluster 
+has been created. Now that we have created the logical volume, we can create a file 
+system. Let's use mkfs.xfs to create an xfs file system. Because after all, 
+HA LVM is what you want to use for a regular Linux file system, that is file systems 
+that are not cluster-aware, such as CFS or OCFS2. 
+So mkfs.xfs on dev/vgcluster/lvcluster is creating the file system for us. 
+Now this is something that we have to do on one node only, because it is written 
+to the shared storage device. Now we need to take care of the LVM configuration file. 
+And that is something that is going to happen in the lvm.conf. 
+And we need to make sure that local volume groups are going to be listed. 
+So, vim /etc/lvm/lvm.conf. And we are looking for the locking type. 
+And this locking type needs to be set to locking type one. 
+It already is, that makes things easy for us. Next we need to look for the 
+volume_list parameter. So do we have it already? Here we have the 
+volume_list parameter. So what is it that we are going to do here? 
+Let's read the configuration, because this is important. 
+Only logical volumes selected by this list are activated. 
+If the list is defined, LVM is only activated if it matches an entry in the list. 
+And if it's undefined, it is not going to happen. Now you can see that different 
+options exist. You can use vgname, vgname lgname, or you can use tags. 
+And then it displays an example as well. Now, below the example 
+I can put my volume_list, and this volume_list is going to be set to the local 
+volume group, which is cl, this is the volume group that has been created 
+automatically when we were installing these machines. So this volume list needs to 
+be set on the other nodes as well. So on centos2, we are also going to edit 
+etc/lvm/lvm.conf. And we'll be looking for the volume list, and in this volume 
+list we are going to specify the local volume group. So volume list equals cl. 
+I'm assuming that the name is the same, let me just check that this really is the 
+case. Vgs, ah, vgs is showing cl_centos12. Then I want to double-check what it is 
+like on centos11. Centos11 it is cl. Okay, so we have some differences here. 
+Now let's take care of the third node as well. Etc/lvm/lvm.conf. 
+And here also we specify the volume_list. Now the interesting thing of this 
+volume_list is that it's going to include only local volumes, 
+which makes sure that it doesn't consider any of the volume groups or logical 
+volumes that are managed by the cluster. So let's put in the vgname, 
+and let's make sure that we are using the right vgname. 
+Cl_centos13, that's exactly what I have entered. 
+There's one more thing I would like to show you in lvm.conf. 
+And that is the locking_type. Locking_type is what we need to set to local 
+file base locking in order to use HA LVM. Of you wanna use CLVM, you need to set 
+locking_type to three. And this means that if a node is using HA LVM, the node 
+cannot use CLVM as well. That is very interesting as a design consideration, 
+because it means that it takes away from the flexibility that you will have using 
+these technologies on a CentOS cluster. It does have some advantages what 
+SUSE is doing. SUSE is doing everything through CLVM, and they just set a volume 
+to private, or not. Now that we have changed these LVM parameters, we can use dracut, 
+dash H, dash F slash boot slash initramfs, we set that to the current kernel version. 
+And once that has happened, we can reboot. Let's not do that immediately, 
+let's first make sure that this dracut command is successfully generating 
+a new initramfs. This is also something that we can run on all of the nodes. 
+We don't see anything wrong here, but I want to verify, in the boot directory, 
+where we can see that the new initramfs has been generated for this kernel version. 
+All good, so we can reboot. Same here. Same here. And let's give it a minute 
+or so to get back. So now we are back after the reboot. Let's verify what we can see. 
+And here you can see the current state of the LVM logical volumes, okay. 
+Now we are going to integrate these logical volumes in a cluster. 
+So pcs status is showing the current status of the pcs cluster. 
+And this is looking okay, everything is running, and we have a few resources in 
+this cluster as well. Now we can create the HA LVM resources. So pcs resource 
+create halvm LVM. Where LVM is a generic resource that we are going to 
+use in the cluster, and HA LVM is just the name that we are assigning. 
+Volgrpname equals vgcluster, exclusive is true, and we are going to put it in a 
+group with name halvmfs. Now that we have created the resource for the cluster, 
+we can verify that it has indeed been started. So pcs status, and we can see 
+resource group halvmfs is running HA LVM. Now we need to take care of the file 
+system, and the file system needs to be mounted somewhere. So let's 
+start using mkdir, and create a mount point. And this mount point, of course, 
+needs to be available on all of the nodes. There we go. Now that we have created 
+the mount point for the xfs file system, we can create a resource 
+that mounts the file system through the cluster. So pcs resource 
+create xfsfs Filesystem, that's a primitive type that we are using, 
+device equals /dev/vgcluster/lvcluster, directory equals /xfs, fstype equals xfs, 
+and group halvmfs. And now we can repeat pcs status. And oh dear, you can see 
+that something is not right here. Now, let's read what is happening. 
+So we can see that we have a resource group, halvmfs. There is a HA LVM that is 
+started, and there is an xfsfs that is stopped. We can see some failed actions as well.
+Xfsfs start, expected device to exist. And that is on centos11. So on centos11 it 
+cannot find the device. On centos13 it cannot find the device, and on centos12 it's 
+mentioning, could not mount file system, dev vgluster on slash xfs. 
+That's interesting, because it's a different error. Let's first use lvs on the 
+three different nodes to verify the status of the device. We need to know if 
+the device exists or not. And we can see that the centos11 node sees the device, 
+but it's not active, we are missing the A here. If you look at centos12, 
+you can see that the device is active, so that's good. And if you look at centos13, 
+we can see that the device is not active. So that explains what is happening on 
+centos11 and 13. It doesn't explain what is happening on centos12. So do we 
+have the xfs mount point? We do have the mount point, but still it does not want 
+to mount it. So let's figure out why. If a cluster resource cannot be mounted, 
+it's always a good idea to figure out what is happening. One of the approaches 
+is to try mounting the resource without cluster. So let's see if we can 
+use mount dev/vgcluster/lvcluster slash xfs. And there we can see that it does 
+mount without the cluster. Now that's interesting, because it does not mount 
+in the cluster. And that means that there is some condition in the cluster that 
+is preventing the resource from being mounted. If that happens it may be useful 
+to use pcs resource failcount sho xfsfs. Andwe can see that fail counts for xfsfs 
+have on all nodes been set to infinity. That means that the cluster has tried to 
+activate the resources, that didn't work, and it has been set to infinity, 
+which means that the maximum amount of failures has been reached. 
+If that's the case, we can use pcs resource, debug-start xfsfs. 
+So what do we see? We see unknown filesystem type, xfs--group. 
+So what's happening? Well we found what is wrong here, we have made an error 
+while defining the resource. So we need to remove the resource. Pcs resource help, 
+let's pipe that through less. We have created the resource, and here you can see 
+delete. So we need delete, followed by the name of the resource. So pcs resource 
+delete xfsfs. So pcs status to show the current status of the cluster. 
+And now we can see there are no more errors. And let's get back to the node where 
+we have initially created the resource. And here we can see that there was one 
+lousy space that was missing, and thus creating all the problems. 
+Pcs status again, and now we can see that the xfsfs has been started 
+successfully on the node centos12. Now there is one more test that 
+I would like to do, and that is pcs cluster standby. We are going to standby 
+centos12.example.com. Pcs status, and what is pcs status showing us? 
+It is showing the HA LVM is now available on centos11. And if we type LVS, 
+and we can see that the cluster volume is now active, centos11. So the HA LVM is 
+working. Let's use pcs cluster, unstandby on centos11.example.com, to restore 
+the original situation, and that finishes this lab about HA LVM.
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
