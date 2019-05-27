@@ -16,9 +16,9 @@ All other nodes
 #4.  Configure corosync on Red Hat
 # Ha on redhad (centos)
 # on all the nodes
+# firewall-cmd --permanent --add-serice=high-availablility 
 yum -y install epel-release
 yum -y install pcs fence-agents-all
-firewall-cmd --permanent --add-serice=high-availablility 
 systemctl enable --now pcsd
 echo password | passwd --stdin hacluster
 

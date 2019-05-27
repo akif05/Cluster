@@ -15,19 +15,22 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   ENV['LC_ALL']="en_US.UTF-8"
   ENV['LANG']="en_US.UTF-8"
 
-##### Install ubuntu 18.04 ##########
-# configure cache-server machine
-  config.vm.define "ubuntu18" do |node|
-    node.vm.box = "bento/ubuntu-18.04"
-    node.vm.hostname = "ubuntu1.example.com"
-    node.vm.network "private_network", ip: "192.168.4.240"
+  # configure cache-server machine
+  config.vm.define "cache-server" do |node|
+    node.vm.box = "debian/jessie64"
+    node.vm.hostname = "cache-server.example.com"
+    node.vm.network "private_network", ip: "192.168.4.100"
     node.vm.provider "virtualbox" do |vb|
-      vb.memory = "1024"
-      vb.name = "ubuntu18"
+      vb.memory = "512"
+      vb.name = "cache-server"
+    end
+    node.vm.provision :ansible_local do |ansible|
+      ansible.install_mode = "pip"
+      ansible.version = "latest"
+      ansible.playbook = "provisioning/cache-server.yml"
     end
   end
 
-####################################
   # configure tree machines server1, server2 and server3
   (1..3).each do |i|
     config.vm.define "server#{i}" do |node|

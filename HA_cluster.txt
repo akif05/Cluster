@@ -1,13 +1,4 @@
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-#H clustering
+# HA clustering
 # Clustering, Clastering, read from stdin
 corosync on suse
 First node: "node1"
@@ -25,7 +16,7 @@ All other nodes
 ################################################################################
 	
 #Lab 4.  Configure corosync on Red Hat ########################
-# Ha on redhad (centos)
+# HA  on redhad (centos)
 # on all the nodes
 yum -y install epel-release
 yum -y install pcs fence-agents-all
@@ -422,8 +413,8 @@ pcs status
     INFINNITY (1,000,000): must happen
     -INFINNITY (-1,000,000): must not happen
 # Resouce migration will enforce a constraint on the resource
-    pcs resource move     |      crm migrate
-    pcs resource clerar   |      crm unmigrate
+    pcs resource move  |      crm migrate
+    pcs resource clear |      crm unmigrate
 # -INIFINITY on location constraint will never run the resource on the node 
 # specified, even if the node is the last in the cluster.
 
@@ -485,8 +476,28 @@ Primitive that should be started multiple time
 pcs resource failcount show
 pcs resource debug-start myresource
 pcs resource failcont myresource mynode
-pce resource cleanup myresource
+pcs resource cleanup myresource
 crm resource cleanup myresource
+
+pcs resource debug-start vip_res
+pcs resource show
+pcs resource failcount reset
+pcs resource cleanup
+pcs resource update
+pcs resource show
+systemctl restart pcsd
+pcs resource show
+pcs quorum unblock
+
+pcs cluster cib
+crm_verify -L -V
+pcs property set stonith-enabled=false
+pcs resource standards
+pcs resource providers
+pcs resource agents ocf:heartbeat
+
+pcs resource debug-start vip_res --full
+
 
 less /var/log/
 pcs resource describe IPaddr2
@@ -553,6 +564,21 @@ Solution:
  we use pcs constraint order apache-group then ftp-group. 
  This is adding the order constraint and that's all we needed to do for this lab.
 
+
+## pritunl cluster systemd
+    pcs resource delete Pritunl_vip
+    pcs resource delete Pritunl_service
+
+    pcs resource create Pritunl-service systemd:pritunl --group Pritunl-group
+    pcs resource create Pritunl-vip IPaddr2 ip=192.168.4.11 cidr_netmask=24 nic=eth1
+    pcs status
+    pcs resource move
+    pcs resource update Pritunl-vip IPaddr2 ip=192.168.4.11 cidr_netmask=24 nic=eth1 --group Pritunl-group
+    pcs resource move
+    pcs resource show
+    pcs resource delete Pritunl-vip
+    pcs resource create Pritunl-vip IPaddr2 ip=192.168.4.11 cidr_netmask=24 nic=eth1 --group Pritunl-group
+    pcs resource show
 ################################################################################
 ################################################################################
 ################################################################################
@@ -642,6 +668,15 @@ pcs resource group list
 pcs cluster status
 crm_mon
 
+# Can't start resource after moving to differnt nod, borcken cluster
+# delete and recreate the resources
+pcs resource delete Pritunl-vip
+pcs resource delete Pritunl-service
+pcs resource show
+pcs resource create Pritunl-vip IPaddr2 ip=192.168.4.11 cidr_netmask=24 nic=eth1 --group Pritunl-group
+pcs resource show
+pcs resource create Pritunl-service systemd:pritunl --group Pritunl-group
+pcs constraint order Pritunl-vip then Pritunl-service
 # Create constraints. 1 resource can not be started together 
 # -10000 Expresess strong preference resource not to be started on same node
 # But if there is no other options, resource still can be on same node

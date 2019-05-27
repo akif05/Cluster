@@ -188,7 +188,7 @@ cgroups is resource limitation
 ¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡
 man 5 systemd resource control
 
-Linux performance leson
+Linux performance lesson
 free -m
 cd /proc/sys/vm
 cat nr_hugepages
